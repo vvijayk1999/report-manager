@@ -32,7 +32,6 @@ wheels/
 
 # Flask-specific files
 instance/
-config.py
 *.log
 
 # If you're using SQLite

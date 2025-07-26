@@ -2,10 +2,10 @@ from typing import Dict, Any
 import calendar
 from datetime import datetime, timedelta
 
-from builder.report_builder import ReportBuilder
+from ..builders.base import BaseReportBuilder
 
 
-class WeekwiseRptBuilder(ReportBuilder):
+class WeekwiseReportBuilder(BaseReportBuilder):
     def week_to_day_range(self, year: int, month: int, week_no: int) -> str:
         """Convert week number to date range string."""
         # Get month details
@@ -31,6 +31,7 @@ class WeekwiseRptBuilder(ReportBuilder):
         overall_summary = (
             self._calculate_summary(self.df)
             .pipe(self._add_calculated_columns)
+            .pipe(self.format_time)
             .pipe(self.roundoff)
             .to_dicts()[0]
         )
@@ -47,6 +48,7 @@ class WeekwiseRptBuilder(ReportBuilder):
             week_summary = (
                 self._calculate_summary(week_group)
                 .pipe(self._add_calculated_columns)
+                .pipe(self.format_time)
                 .pipe(self.roundoff)
                 .to_dicts()[0]
             )
@@ -61,6 +63,7 @@ class WeekwiseRptBuilder(ReportBuilder):
             records = (
                 self.group_data(week_group)
                 .pipe(self._add_calculated_columns)
+                .pipe(self.format_time)
                 .pipe(self.roundoff)
                 .pipe(self.sort_df)
                 .to_dicts()

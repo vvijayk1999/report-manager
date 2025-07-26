@@ -1,9 +1,10 @@
 from typing import Dict, Any
 import polars as pl
-from builder.report_builder import ReportBuilder
+
+from ..builders.base import BaseReportBuilder
 
 
-class HourwiseRptBuilder(ReportBuilder):
+class HourwiseReportBuilder(BaseReportBuilder):
     def set_end_time_column(self, end_time_column: str):
         self.end_time_column = end_time_column
         return self
@@ -13,6 +14,7 @@ class HourwiseRptBuilder(ReportBuilder):
         overall_summary = (
             self._calculate_summary(self.df)
             .pipe(self._add_calculated_columns)
+            .pipe(self.format_time)
             .pipe(self.roundoff)
             .to_dicts()[0]
         )
@@ -20,6 +22,7 @@ class HourwiseRptBuilder(ReportBuilder):
         records = (
             self.group_data(self.df)
             .pipe(self._add_calculated_columns)
+            .pipe(self.format_time)
             .pipe(self.roundoff)
             .pipe(self.sort_df)
         )

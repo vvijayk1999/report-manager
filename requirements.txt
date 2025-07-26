@@ -1,3 +1,4 @@
-polars==0.20.10
-pydantic==1.10.13
-python-dotenv
+polars>=0.20.10
+pydantic>=1.10.13
+pyyaml>=6.0
+typing-extensions>=4.0.0

@@ -1,10 +1,10 @@
 from typing import Dict, Any
 from datetime import datetime
 
-from builder.report_builder import ReportBuilder
+from ..builders.base import BaseReportBuilder
 
 
-class MonthwiseRptBuilder(ReportBuilder):
+class MonthwiseReportBuilder(BaseReportBuilder):
     def prepare_response(self) -> Dict[str, Any]:
         # Process overall summary in one chain
         overall_summary = (
@@ -38,6 +38,7 @@ class MonthwiseRptBuilder(ReportBuilder):
             records = (
                 self.group_data(month_group)
                 .pipe(self._add_calculated_columns)
+                .pipe(self.format_time)
                 .pipe(self.roundoff)
                 .pipe(self.sort_df)
                 .to_dicts()

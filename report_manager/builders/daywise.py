@@ -1,10 +1,10 @@
 from typing import Dict, Any
 from datetime import datetime
 
-from builder.report_builder import ReportBuilder
+from ..builders.base import BaseReportBuilder
 
 
-class DaywiseRptBuilder(ReportBuilder):
+class DaywiseReportBuilder(BaseReportBuilder):
     def prepare_response(self) -> Dict[str, Any]:
         # Process overall summary in one chain
         overall_summary = (

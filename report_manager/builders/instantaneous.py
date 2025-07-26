@@ -1,14 +1,15 @@
 from typing import Dict, Any
 
-from builder.report_builder import ReportBuilder
+from ..builders.base import BaseReportBuilder
 
 
-class InstantaneousRptBuilder(ReportBuilder):
+class InstantaneousReportBuilder(BaseReportBuilder):
     def prepare_response(self) -> Dict[str, Any]:
         # Calculate overall summary once
         overall_summary = (
             self._calculate_summary(self.df)
             .pipe(self._add_calculated_columns)
+            .pipe(self.format_time)
             .pipe(self.roundoff)
             .to_dicts()[0]
         )
@@ -20,11 +21,11 @@ class InstantaneousRptBuilder(ReportBuilder):
             records = (
                 self.group_data(group_df)
                 .pipe(self._add_calculated_columns)
+                .pipe(self.format_time)
                 .pipe(self.roundoff)
                 .pipe(self.sort_df)
                 .to_dicts()
             )
-
             filtered_records = [
                 {
                     **{
