@@ -7,12 +7,16 @@ import logging
 from .config import ReportConfig, ReportType, ReportCategory
 from .filter import ReportFilter
 from ..builders.base import BaseReportBuilder
-from ..exceptions.report_exceptions import ReportConfigurationError, ReportBuilderNotFoundError
+from ..exceptions.report_exceptions import (
+    ReportConfigurationError,
+    ReportBuilderNotFoundError
+)
 
 
 class ReportManager:
     """
-    Central manager for report generation with configurable builders and settings.
+    Central manager for report generation
+    with configurable builders and settings.
     """
 
     def __init__(self, config: Optional[ReportConfig] = None):
@@ -24,12 +28,16 @@ class ReportManager:
     def _register_default_builders(self):
         """Register default report builders."""
         default_builders = {
-            ReportType.HOURWISE: "report_manager.builders.hourwise.HourwiseReportBuilder",
-            ReportType.DAYWISE: "report_manager.builders.daywise.DaywiseReportBuilder",
-            ReportType.WEEKWISE: "report_manager.builders.weekwise.WeekwiseReportBuilder",
-            ReportType.MONTHWISE: "report_manager.builders.monthwise.MonthwiseReportBuilder",
-            ReportType.SHIFTWISE: "report_manager.builders.shiftwise.ShiftwiseReportBuilder",
-            ReportType.INSTANTANEOUS: "report_manager.builders.instantaneous.InstantaneousReportBuilder"
+            ReportType.DAYWISE:
+                "report_manager.builders.daywise.DaywiseReportBuilder",
+            ReportType.WEEKWISE:
+                "report_manager.builders.weekwise.WeekwiseReportBuilder",
+            ReportType.MONTHWISE:
+                "report_manager.builders.monthwise.MonthwiseReportBuilder",
+            ReportType.SHIFTWISE:
+                "report_manager.builders.shiftwise.ShiftwiseReportBuilder",
+            ReportType.INSTANTANEOUS:
+            "report_manager.builders.instantaneous.InstantaneousReportBuilder"
         }
 
         for report_type, builder_path in default_builders.items():
@@ -37,9 +45,15 @@ class ReportManager:
                 self.register_builder(report_type.value, builder_path)
             except ImportError as e:
                 logging.warning(
-                    f"Could not register default builder for {report_type}: {e}")
+                    f"Could not register default builder "
+                    f"for {report_type}: {e}"
+                )
 
-    def register_builder(self, report_type: str, builder_class: Union[str, Type[BaseReportBuilder]]):
+    def register_builder(
+        self,
+        report_type: str,
+        builder_class: Union[str, Type[BaseReportBuilder]]
+    ):
         """Register a custom report builder."""
         if isinstance(builder_class, str):
             # Dynamic import
@@ -63,21 +77,25 @@ class ReportManager:
                 f"No builder registered for report type: {report_type}")
         return self._builder_registry[report_type]
 
-    def _prepare_column_configuration(self,
-                                      filter_params: ReportFilter,
-                                      grouping_columns: Set[str],
-                                      aggregation_columns: Set[str],
-                                      average_columns: Set[str],
-                                      counting_columns: Set[str],
-                                      simple_counting_columns: Set[str],
-                                      first_value_columns: Set[str]) -> Dict[str, Any]:
+    def _prepare_column_configuration(
+        self,
+        filter_params: ReportFilter,
+        grouping_columns: Set[str],
+        aggregation_columns: Set[str],
+        average_columns: Set[str],
+        counting_columns: Set[str],
+        simple_counting_columns: Set[str],
+        first_value_columns: Set[str]
+    ) -> Dict[str, Any]:
         """Prepare column configuration based on department and category."""
 
         department_config = self.config.departments.get(
             filter_params.department_id)
         if not department_config:
             raise ReportConfigurationError(
-                f"Department configuration not found: {filter_params.department_id}")
+                f"Department configuration not found: "
+                f"{filter_params.department_id}"
+            )
 
         # Initialize with default grouping columns
         final_grouping_columns = set(self.config.default_grouping_columns)
@@ -90,7 +108,8 @@ class ReportManager:
         # Handle category-specific configurations
         machine_columns = {"asset_id", "machine_name"}
 
-        if filter_params.category in [ReportCategory.COUNTWISE, ReportCategory.HANKWISE]:
+        if filter_params.category in \
+                [ReportCategory.COUNTWISE, ReportCategory.HANKWISE]:
             counting_columns.update(machine_columns)
             final_grouping_columns -= machine_columns
         elif filter_params.category == ReportCategory.LOTWISE:
@@ -100,7 +119,8 @@ class ReportManager:
             final_grouping_columns -= counting_columns
 
         # Add shift columns for shift-based reports
-        if filter_params.report_type in [ReportType.SHIFTWISE, ReportType.INSTANTANEOUS]:
+        if filter_params.report_type in \
+                [ReportType.SHIFTWISE, ReportType.INSTANTANEOUS]:
             final_grouping_columns.update({"shift_id", "platform_shift_id"})
 
         return {
@@ -112,7 +132,11 @@ class ReportManager:
             "first_value_columns": first_value_columns
         }
 
-    def _prepare_column_mappings(self, filter_params: ReportFilter, column_mappings: Dict[str, Any]) -> Dict[str, Any]:
+    def _prepare_column_mappings(
+        self,
+        filter_params: ReportFilter,
+        column_mappings: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Prepare column mappings with mandatory fields."""
         department_config = self.config.departments.get(
             filter_params.department_id)
@@ -123,29 +147,51 @@ class ReportManager:
         product_column = department_config.product_column
         product_config = self.config.column_definitions.get(product_column)
 
-        if not product_config:
-            return column_mappings
-
         # Generate mandatory mappings based on category
         mandatory_mappings = {}
 
         if filter_params.category == ReportCategory.COUNTWISE:
+            if product_config:
+                mandatory_mappings.update({
+                    product_column: {
+                        "name": product_config.name,
+                        "unit": product_config.unit,
+                        "sort_order": -3
+                    },
+                })
             mandatory_mappings.update({
-                product_column: {"name": product_config.name, "unit": product_config.unit, "sortOrder": -3},
-                "lot_number": {"name": "Lot name", "sortOrder": -2},
-                "machine_name": {"name": "No. of M/C", "sortOrder": -1}
+                "lot_number": {"name": "Lot name", "sort_order": -2},
+                "machine_name": {"name": "No. of M/C", "sort_order": -1}
             })
         elif filter_params.category == ReportCategory.LOTWISE:
             mandatory_mappings.update({
-                "lot_number": {"name": "Lot name", "sortOrder": -3},
-                product_column: {"name": f"No. of {product_config.name}", "unit": product_config.unit, "sortOrder": -2},
-                "machine_name": {"name": "No. of M/C", "sortOrder": -1}
+                "lot_number": {"name": "Lot name", "sort_order": -3},
+            })
+            if product_config:
+                mandatory_mappings.update({
+                    product_column: {
+                        "name": f"No. of {product_config.name}",
+                        "unit": product_config.unit,
+                        "sort_order": -2
+                    },
+                })
+            mandatory_mappings.update({
+                "machine_name": {"name": "No. of M/C", "sort_order": -1}
             })
         elif filter_params.category == ReportCategory.MACHINEWISE:
             mandatory_mappings.update({
-                "machine_name": {"name": "M/C Name", "sortOrder": -3},
-                product_column: {"name": product_config.name, "unit": product_config.unit, "sortOrder": -2},
-                "lot_number": {"name": "Lot name", "sortOrder": -1}
+                "machine_name": {"name": "M/C Name", "sort_order": -3},
+            })
+            if product_config:
+                mandatory_mappings.update({
+                    product_column: {
+                        "name": product_config.name,
+                        "unit": product_config.unit,
+                        "sort_order": -2
+                    },
+                })
+            mandatory_mappings.update({
+                "lot_number": {"name": "Lot name", "sort_order": -1}
             })
 
         column_mappings.update(mandatory_mappings)
@@ -186,15 +232,28 @@ class ReportManager:
         if not isinstance(data_frame, pl.DataFrame) or data_frame.is_empty():
             raise ValueError("data_frame must be a non-empty Polars DataFrame")
 
-        # Use defaults if not provided
-        grouping_columns = grouping_columns or set()
-        aggregation_columns = aggregation_columns or set()
-        average_columns = average_columns or set()
-        counting_columns = counting_columns or set()
-        simple_counting_columns = simple_counting_columns or set()
-        first_value_columns = first_value_columns or set()
-        column_mappings = column_mappings or {}
-        summary_columns = summary_columns or set()
+        # Use defaults from config if not provided
+        grouping_columns = grouping_columns or set(
+            self.config.grouping_columns)
+        aggregation_columns = aggregation_columns or set(
+            self.config.aggregation_columns)
+        average_columns = average_columns or set(
+            self.config.average_columns)
+        counting_columns = counting_columns or set(
+            self.config.counting_columns
+        )
+        simple_counting_columns = simple_counting_columns or set(
+            self.config.simple_counting_columns
+        )
+        first_value_columns = first_value_columns or set(
+            self.config.first_value_columns
+        )
+        summary_columns = summary_columns or set(
+            self.config.summary_columns)
+        column_mappings = column_mappings or {
+            k: v.dict(include={"name", "sort_order"})
+            for k, v in self.config.column_definitions.items()
+        }
 
         # Validate department if filter provided
         if filter_params and filter_params.department_id:
@@ -220,7 +279,7 @@ class ReportManager:
             }
 
         # Get builder class
-        report_type = filter_params.report_type
+        report_type = filter_params.report_type if filter_params else "daywise"
         builder_class = self._get_builder_class(report_type)
 
         # Create and configure builder
@@ -264,7 +323,10 @@ class ReportManager:
         """Get list of available report types."""
         return list(self._builder_registry.keys())
 
-    def get_department_config(self, department_id: str) -> Optional[Dict[str, Any]]:
+    def get_department_config(
+        self,
+        department_id: str
+    ) -> Optional[Dict[str, Any]]:
         """Get configuration for a specific department."""
         dept_config = self.config.departments.get(department_id)
         return dept_config.dict() if dept_config else None

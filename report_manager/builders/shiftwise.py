@@ -10,7 +10,6 @@ class ShiftwiseReportBuilder(BaseReportBuilder):
         overall_summary = (
             self._calculate_summary(self.df)
             .pipe(self._add_calculated_columns)
-            .pipe(self.format_time)
             .pipe(self.roundoff)
             .to_dicts()[0]
         )
@@ -25,7 +24,6 @@ class ShiftwiseReportBuilder(BaseReportBuilder):
             day_summary = (
                 self._calculate_summary(day_group)
                 .pipe(self._add_calculated_columns)
-                .pipe(self.format_time)
                 .pipe(self.roundoff)
                 .to_dicts()[0]
             )
@@ -38,7 +36,6 @@ class ShiftwiseReportBuilder(BaseReportBuilder):
                 records = (
                     self.group_data(group_df)
                     .pipe(self._add_calculated_columns)
-                    .pipe(self.format_time)
                     .pipe(self.roundoff)
                     .pipe(self.sort_df)
                     .to_dicts()
@@ -60,7 +57,6 @@ class ShiftwiseReportBuilder(BaseReportBuilder):
                 group_summary = (
                     self._calculate_summary(group_df)
                     .pipe(self._add_calculated_columns)
-                    .pipe(self.format_time)
                     .pipe(self.roundoff)
                     .to_dicts()[0]
                 )

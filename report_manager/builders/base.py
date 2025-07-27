@@ -3,14 +3,18 @@ from typing import Dict, Set, List, Any, Optional
 import logging
 from abc import ABC, abstractmethod
 
-from ..exceptions.report_exceptions import DataValidationError, FormulaCalculationError
+from ..exceptions.report_exceptions import (
+    DataValidationError,
+    FormulaCalculationError
+)
 
 
 class BaseReportBuilder(ABC):
     """
     Abstract base class for all report builders.
 
-    Provides core functionality for data aggregation, grouping, and calculations.
+    Provides core functionality for data aggregation,
+    grouping, and calculations.
     Designed to be extended by specific report implementations.
     """
 
@@ -41,7 +45,10 @@ class BaseReportBuilder(ABC):
         self.sorting_columns = columns
         return self
 
-    def set_column_mappings(self, mappings: Dict[str, Any]) -> 'BaseReportBuilder':
+    def set_column_mappings(
+        self,
+        mappings: Dict[str, Any]
+    ) -> 'BaseReportBuilder':
         """Set column mappings for the report."""
         self.column_mappings = mappings
         return self
@@ -55,42 +62,66 @@ class BaseReportBuilder(ABC):
         self.df = df
         return self
 
-    def set_shift_mapping(self, sft_mpng: Dict[str, str]) -> 'BaseReportBuilder':
+    def set_shift_mapping(
+        self,
+        sft_mpng: Dict[str, str]
+    ) -> 'BaseReportBuilder':
         """Set shift mapping for the report."""
         self.shift_mapping = sft_mpng
         return self
 
-    def set_formula_mappings(self, mappings: List[Dict[str, Any]]) -> 'BaseReportBuilder':
+    def set_formula_mappings(
+        self,
+        mappings: List[Dict[str, Any]]
+    ) -> 'BaseReportBuilder':
         """Set formula mappings for calculated columns."""
         self.formula_mappings = mappings
         return self
 
-    def set_roundoff_columns(self, columns: Dict[str, int]) -> 'BaseReportBuilder':
+    def set_roundoff_columns(
+        self,
+        columns: Dict[str, int]
+    ) -> 'BaseReportBuilder':
         """Set columns to be rounded and their decimal places."""
         self.roundoff_columns = columns
         return self
 
-    def set_summary_columns(self, columns: Set[str]) -> 'BaseReportBuilder':
+    def set_summary_columns(
+        self,
+        columns: Set[str]
+    ) -> 'BaseReportBuilder':
         """Set columns to be summarized."""
         self.summary_columns = columns
         return self
 
-    def set_agg_columns(self, columns: List[str]) -> 'BaseReportBuilder':
+    def set_agg_columns(
+        self,
+        columns: List[str]
+    ) -> 'BaseReportBuilder':
         """Set columns to be aggregated."""
         self.agg_columns = columns
         return self
 
-    def set_average_columns(self, columns: List[str]) -> 'BaseReportBuilder':
+    def set_average_columns(
+        self,
+        columns: List[str]
+    ) -> 'BaseReportBuilder':
         """Set columns to be averaged."""
         self.avg_columns = columns
         return self
 
-    def set_first_select_columns(self, columns: List[str]) -> 'BaseReportBuilder':
+    def set_first_select_columns(
+        self,
+        columns: List[str]
+    ) -> 'BaseReportBuilder':
         """Set columns for first value selection."""
         self.first_select_columns = columns
         return self
 
-    def set_constants_map(self, constants_map: Dict[str, Any]) -> 'BaseReportBuilder':
+    def set_constants_map(
+        self,
+        constants_map: Dict[str, Any]
+    ) -> 'BaseReportBuilder':
         """Set constants map for formula calculations."""
         self.constants_map = constants_map
         return self
@@ -100,24 +131,20 @@ class BaseReportBuilder(ABC):
         self.counting_columns = columns
         return self
 
-    def set_simple_counting_columns(self, columns: List[str]) -> 'BaseReportBuilder':
+    def set_simple_counting_columns(
+        self,
+        columns: List[str]
+    ) -> 'BaseReportBuilder':
         """Set columns to be simple counted."""
         self.simple_counting_columns = columns
         return self
 
-    def set_group_by_columns(self, columns: List[str]) -> 'BaseReportBuilder':
+    def set_group_by_columns(
+        self,
+        columns: List[str]
+    ) -> 'BaseReportBuilder':
         """Add additional columns to group by."""
         self.group_by_columns = self.group_by_columns + columns
-        return self
-
-    def set_time_format_mapping(self, time_format_mapping: Dict[str, Dict[str, str]]) -> 'BaseReportBuilder':
-        """Set time format mapping."""
-        self.time_format_mapping = time_format_mapping
-        return self
-
-    def set_doff_number_column(self, doff_number_column: str) -> 'BaseReportBuilder':
-        """Set doff number column."""
-        self.doff_number_column = doff_number_column
         return self
 
     def set_department_id(self, department_id: str) -> 'BaseReportBuilder':
@@ -147,12 +174,27 @@ class BaseReportBuilder(ABC):
         """Group and aggregate the DataFrame."""
         try:
             aggs = (
-                [pl.sum(col).alias(col) for col in self.agg_columns if col in df.columns] +
-                [pl.mean(col).alias(col) for col in self.avg_columns if col in df.columns] +
-                [pl.n_unique(col).alias(col) for col in self.counting_columns if col in df.columns] +
-                [pl.count(col).alias(col) for col in self.simple_counting_columns if col in df.columns] +
-                [pl.first(col).alias(col)
-                 for col in self.first_select_columns if col in df.columns]
+                [
+                    pl.sum(col).alias(col)
+                    for col in self.agg_columns if col in df.columns
+                ] +
+                [
+                    pl.mean(col).alias(col)
+                    for col in self.avg_columns if col in df.columns
+                ] +
+                [
+                    pl.n_unique(col).alias(col)
+                    for col in self.counting_columns if col in df.columns
+                ] +
+                [
+                    pl.count(col).alias(col)
+                    for col in self.simple_counting_columns
+                    if col in df.columns
+                ] +
+                [
+                    pl.first(col).alias(col)
+                    for col in self.first_select_columns if col in df.columns
+                ]
             )
 
             # Filter group by columns to only include existing columns
@@ -196,7 +238,9 @@ class BaseReportBuilder(ABC):
 
             # Filter to only include summary columns that exist
             existing_summary_cols = [
-                col for col in self.summary_columns if col in result_df.columns]
+                col for col in self.summary_columns
+                if col in result_df.columns
+            ]
             if existing_summary_cols:
                 return result_df.select(existing_summary_cols)
 
@@ -242,10 +286,14 @@ class BaseReportBuilder(ABC):
 
                 # Check if all required columns exist
                 missing_columns = [
-                    col for col in param_column_map.values() if col not in df.columns]
+                    col for col in param_column_map.values()
+                    if col not in df.columns
+                ]
                 if missing_columns:
                     logging.warning(
-                        f"Skipping formula for {column_name}: missing columns {missing_columns}")
+                        f"Skipping formula for {column_name}: "
+                        "missing columns {missing_columns}"
+                    )
                     continue
 
                 df = df.with_columns([
@@ -273,7 +321,8 @@ class BaseReportBuilder(ABC):
             for col in df.columns:
                 if (col in self.roundoff_columns and
                     col in df.columns and
-                        str(df.schema[col]).startswith(('Float32', 'Float64'))):
+                        str(df.schema[col]).startswith(
+                            ('Float32', 'Float64'))):
                     round_expr.append(
                         pl.col(col).round(
                             self.roundoff_columns[col]).alias(col)
@@ -300,29 +349,6 @@ class BaseReportBuilder(ABC):
         except Exception as e:
             logging.warning(f"Error sorting DataFrame: {str(e)}")
             return df
-
-    def format_time(self, df: pl.DataFrame) -> pl.DataFrame:
-        """Format time columns based on time format mapping."""
-        if not self.time_format_mapping:
-            return df
-
-        try:
-            for column, format_config in self.time_format_mapping.items():
-                if column in df.columns:
-                    input_format = format_config.get(
-                        "input_format", "%H:%M:%S")
-                    output_format = format_config.get("output_format", "%H:%M")
-
-                    df = df.with_columns([
-                        pl.col(column)
-                        .str.strptime(pl.Time, input_format)
-                        .dt.strftime(output_format)
-                        .alias(column)
-                    ])
-        except Exception as e:
-            logging.warning(f"Error formatting time columns: {str(e)}")
-
-        return df
 
     @abstractmethod
     def prepare_response(self) -> Dict[str, Any]:

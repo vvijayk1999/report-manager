@@ -10,7 +10,6 @@ class MonthwiseReportBuilder(BaseReportBuilder):
         overall_summary = (
             self._calculate_summary(self.df)
             .pipe(self._add_calculated_columns)
-            .pipe(self.format_time)
             .pipe(self.roundoff)
             .to_dicts()[0]
         )
@@ -24,7 +23,6 @@ class MonthwiseReportBuilder(BaseReportBuilder):
             month_summary = (
                 self._calculate_summary(month_group)
                 .pipe(self._add_calculated_columns)
-                .pipe(self.format_time)
                 .pipe(self.roundoff)
                 .to_dicts()[0]
             )
@@ -38,7 +36,6 @@ class MonthwiseReportBuilder(BaseReportBuilder):
             records = (
                 self.group_data(month_group)
                 .pipe(self._add_calculated_columns)
-                .pipe(self.format_time)
                 .pipe(self.roundoff)
                 .pipe(self.sort_df)
                 .to_dicts()
