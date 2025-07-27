@@ -4,7 +4,7 @@ from functools import lru_cache
 import importlib
 import logging
 
-from .config import ReportConfig, ReportType, ReportCategory
+from .config import ReportConfig, ReportType, ReportCategory, GroupingType
 from .filter import ReportFilter
 from ..builders.base import BaseReportBuilder
 from ..exceptions.report_exceptions import (
@@ -77,6 +77,36 @@ class ReportManager:
                 f"No builder registered for report type: {report_type}")
         return self._builder_registry[report_type]
 
+    def _get_columns_by_type(self) -> Dict[str, Set[str]]:
+        """Extract column groupings from column
+        definitions and legacy configurations."""
+        column_groups = {
+            "grouping_columns": set(self.config.grouping_columns),
+            "aggregation_columns": set(self.config.aggregation_columns),
+            "average_columns": set(self.config.average_columns),
+            "counting_columns": set(self.config.counting_columns),
+            "simple_counting_columns":
+                set(self.config.simple_counting_columns),
+            "first_value_columns": set(self.config.first_value_columns),
+        }
+
+        # Add columns from column_definitions based on their grouping_type
+        for col_name, col_config in self.config.column_definitions.items():
+            if col_config.grouping_type == GroupingType.GROUPING:
+                column_groups["grouping_columns"].add(col_name)
+            elif col_config.grouping_type == GroupingType.AGGREGATION:
+                column_groups["aggregation_columns"].add(col_name)
+            elif col_config.grouping_type == GroupingType.AVERAGE:
+                column_groups["average_columns"].add(col_name)
+            elif col_config.grouping_type == GroupingType.COUNTING:
+                column_groups["counting_columns"].add(col_name)
+            elif col_config.grouping_type == GroupingType.SIMPLE_COUNTING:
+                column_groups["simple_counting_columns"].add(col_name)
+            elif col_config.grouping_type == GroupingType.FIRST_VALUE:
+                column_groups["first_value_columns"].add(col_name)
+
+        return column_groups
+
     def _prepare_column_configuration(
         self,
         filter_params: ReportFilter,
@@ -97,9 +127,29 @@ class ReportManager:
                 f"{filter_params.department_id}"
             )
 
-        # Initialize with default grouping columns
+        # Get columns from column definitions
+        column_groups = self._get_columns_by_type()
+
+        # Merge with provided columns (provided columns take precedence)
         final_grouping_columns = set(self.config.default_grouping_columns)
+        final_grouping_columns.update(column_groups["grouping_columns"])
         final_grouping_columns.update(grouping_columns)
+
+        final_aggregation_columns = set(column_groups["aggregation_columns"])
+        final_aggregation_columns.update(aggregation_columns)
+
+        final_average_columns = set(column_groups["average_columns"])
+        final_average_columns.update(average_columns)
+
+        final_counting_columns = set(column_groups["counting_columns"])
+        final_counting_columns.update(counting_columns)
+
+        final_simple_counting_columns = set(
+            column_groups["simple_counting_columns"])
+        final_simple_counting_columns.update(simple_counting_columns)
+
+        final_first_value_columns = set(column_groups["first_value_columns"])
+        final_first_value_columns.update(first_value_columns)
 
         # Add department-specific product column
         if department_config.product_column:
@@ -110,13 +160,13 @@ class ReportManager:
 
         if filter_params.category in \
                 [ReportCategory.COUNTWISE, ReportCategory.HANKWISE]:
-            counting_columns.update(machine_columns)
+            final_counting_columns.update(machine_columns)
             final_grouping_columns -= machine_columns
         elif filter_params.category == ReportCategory.LOTWISE:
-            counting_columns.update(machine_columns)
+            final_counting_columns.update(machine_columns)
             if department_config.product_column:
-                counting_columns.add(department_config.product_column)
-            final_grouping_columns -= counting_columns
+                final_counting_columns.add(department_config.product_column)
+            final_grouping_columns -= final_counting_columns
 
         # Add shift columns for shift-based reports
         if filter_params.report_type in \
@@ -125,11 +175,11 @@ class ReportManager:
 
         return {
             "grouping_columns": final_grouping_columns,
-            "aggregation_columns": aggregation_columns,
-            "average_columns": average_columns,
-            "counting_columns": counting_columns,
-            "simple_counting_columns": simple_counting_columns,
-            "first_value_columns": first_value_columns
+            "aggregation_columns": final_aggregation_columns,
+            "average_columns": final_average_columns,
+            "counting_columns": final_counting_columns,
+            "simple_counting_columns": final_simple_counting_columns,
+            "first_value_columns": final_first_value_columns
         }
 
     def _prepare_column_mappings(
@@ -233,27 +283,27 @@ class ReportManager:
             raise ValueError("data_frame must be a non-empty Polars DataFrame")
 
         # Use defaults from config if not provided
-        grouping_columns = grouping_columns or set(
-            self.config.grouping_columns)
-        aggregation_columns = aggregation_columns or set(
-            self.config.aggregation_columns)
-        average_columns = average_columns or set(
-            self.config.average_columns)
-        counting_columns = counting_columns or set(
-            self.config.counting_columns
-        )
-        simple_counting_columns = simple_counting_columns or set(
-            self.config.simple_counting_columns
-        )
-        first_value_columns = first_value_columns or set(
-            self.config.first_value_columns
-        )
-        summary_columns = summary_columns or set(
-            self.config.summary_columns)
-        column_mappings = column_mappings or {
-            k: v.dict(include={"name", "sort_order"})
-            for k, v in self.config.column_definitions.items()
-        }
+        grouping_columns = grouping_columns or set()
+        aggregation_columns = aggregation_columns or set()
+        average_columns = average_columns or set()
+        counting_columns = counting_columns or set()
+        simple_counting_columns = simple_counting_columns or set()
+        first_value_columns = first_value_columns or set()
+
+        # Get summary columns from config
+        # (combines legacy and column-definition based)
+        summary_columns = summary_columns or self.config.get_summary_columns()
+
+        # Prepare column mappings from column definitions
+        if not column_mappings:
+            column_mappings = {
+                k: {
+                    "name": v.name,
+                    "sort_order": v.sort_order,
+                    "unit": v.unit
+                }
+                for k, v in self.config.column_definitions.items()
+            }
 
         # Validate department if filter provided
         if filter_params and filter_params.department_id:
@@ -269,13 +319,23 @@ class ReportManager:
             column_mappings = self._prepare_column_mappings(
                 filter_params, column_mappings)
         else:
+            # For cases without filter_params, use columns from definitions
+            column_groups = self._get_columns_by_type()
             column_config = {
-                "grouping_columns": grouping_columns,
-                "aggregation_columns": aggregation_columns,
-                "average_columns": average_columns,
-                "counting_columns": counting_columns,
-                "simple_counting_columns": simple_counting_columns,
-                "first_value_columns": first_value_columns
+                "grouping_columns":
+                    grouping_columns or column_groups["grouping_columns"],
+                "aggregation_columns":
+                    aggregation_columns or
+                    column_groups["aggregation_columns"],
+                "average_columns":
+                    average_columns or column_groups["average_columns"],
+                "counting_columns":
+                    counting_columns or column_groups["counting_columns"],
+                "simple_counting_columns":
+                    simple_counting_columns or
+                    column_groups["simple_counting_columns"],
+                "first_value_columns":
+                    first_value_columns or column_groups["first_value_columns"]
             }
 
         # Get builder class
@@ -309,7 +369,9 @@ class ReportManager:
         builder.set_simple_counting_columns(
             list(column_config["simple_counting_columns"]))
         builder.set_summary_columns(summary_columns)
-        builder.set_roundoff_columns(self.config.precision_defaults)
+
+        # Use precision from column definitions and legacy precision_defaults
+        builder.set_roundoff_columns(self.config.get_precision_defaults())
 
         # Set any additional parameters from kwargs
         for key, value in kwargs.items():

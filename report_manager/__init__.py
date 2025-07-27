@@ -3,10 +3,17 @@ Report Manager Core - A modular, configurable report generation library.
 """
 
 __version__ = "1.0.0"
-__author__ = "Your Name"
+__author__ = "V Vijay Krishnan"
 
 from .core.factory import ReportManager
-from .core.config import ReportConfig, ConfigLoader, ColumnConfig, FormulaConfig, DepartmentConfig
+from .core.config import (
+    ReportConfig,
+    ConfigLoader,
+    ColumnConfig,
+    FormulaConfig,
+    DepartmentConfig,
+    GroupingType
+)
 from .core.filter import ReportFilter, ReportType, ReportCategory
 from .exceptions.report_exceptions import (
     ReportManagerException,
@@ -23,6 +30,7 @@ __all__ = [
     "ColumnConfig",
     "FormulaConfig",
     "DepartmentConfig",
+    "GroupingType",
     "ReportFilter",
     "ReportType",
     "ReportCategory",
