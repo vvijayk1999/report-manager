@@ -58,13 +58,13 @@ The library follows a layered architecture with clear separation of concerns:
 ├─────────────────────────────────────────┤
 │            ReportManager                │  ← Main entry point
 ├─────────────────────────────────────────┤
-│     Configuration & Filter System      │  ← ReportConfig, ReportFilter
+│     Configuration & Filter System       │  ← ReportConfig, ReportFilter
 ├─────────────────────────────────────────┤
-│          Report Builders               │  ← Specific report implementations
+│          Report Builders                │  ← Specific report implementations
 ├─────────────────────────────────────────┤
-│            Base Builder                │  ← Common functionality
+│            Base Builder                 │  ← Common functionality
 ├─────────────────────────────────────────┤
-│          Data Processing               │  ← Polars DataFrame operations
+│          Data Processing                │  ← Polars DataFrame operations
 └─────────────────────────────────────────┘
 ```
 
